@@ -1,4 +1,5 @@
-# Framework repo CI: unit tests + validate the shipped template (offline).
+# Framework-only CI: unit tests. Must not run (or fail) on instance repos
+# created from this template — gate on the canonical framework repository.
 
 name: Framework tests
 
@@ -8,7 +9,8 @@ on:
 
 jobs:
   test:
-    name: Pytest + validate template
+    name: Pytest + validate instance skeleton
+    if: github.repository == 'jackyckma/mel-agent-framework'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,10 +20,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install test deps
-        run: pip install -r template/requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Run unit tests
-        run: python -m pytest tests/ -q
+        run: python -m pytest framework/tests/ -q
 
-      - name: Validate template tree
-        run: python template/scripts/validate_repo.py --root template
+      - name: Validate instance skeleton at repo root
+        run: python scripts/validate_repo.py

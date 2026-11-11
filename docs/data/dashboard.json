@@ -1,0 +1,28 @@
+{
+  "title": "MEL dashboard",
+  "last_updated": null,
+  "built_at": null,
+  "input_fresh_at": null,
+  "stale": true,
+  "stale_after_hours": 48,
+  "summary": {
+    "row_count": 0,
+    "sources": []
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "body": "Placeholder section — Curator configures titles and copy per instance."
+    }
+  ],
+  "charts": [
+    {
+      "id": "rows-by-source",
+      "title": "Processed rows by source",
+      "type": "bar",
+      "labels": [],
+      "values": []
+    }
+  ]
+}
