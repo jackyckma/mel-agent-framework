@@ -1,0 +1,25 @@
+# =============================================================================
+# EXAMPLE ONLY — not the instance mandate.
+# Worked examples of open HTTP endpoints (JSON). Copy patterns into sources.yml.
+# Nothing in the framework should hard-fail when offline; these URLs are for
+# live experiments when network is available (e.g. GitHub Actions fetch job).
+# =============================================================================
+
+sources:
+  # World Bank API — population, total (series SP.POP.TOTL), country USA, recent
+  - id: example-worldbank-usa-pop
+    name: "EXAMPLE — World Bank USA population (SP.POP.TOTL)"
+    url: "https://api.worldbank.org/v2/country/USA/indicator/SP.POP.TOTL?format=json&per_page=20"
+    format: json
+    enabled: false
+    example: true
+    notes: "Open World Bank API. Disabled by default. Topic-neutral demo only."
+
+  # Our World in Data grapher CSV export pattern (illustrative URL)
+  - id: example-owid-sample
+    name: "EXAMPLE — OWID sample CSV endpoint pattern"
+    url: "https://raw.githubusercontent.com/owid/owid-datasets/master/datasets/World%20Bank%20World%20Development%20Indicators%20-%20Selected%20indicators%20%28World%20Bank%29/World%20Bank%20World%20Development%20Indicators%20-%20Selected%20indicators%20%28World%20Bank%29.csv"
+    format: csv
+    enabled: false
+    example: true
+    notes: "Large CSV possible. Prefer smaller extracts in real instances. EXAMPLE ONLY."

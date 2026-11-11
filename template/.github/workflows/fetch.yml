@@ -1,0 +1,53 @@
+# Mechanical pipeline: fetch → transform → build dashboard, then commit if needed.
+# Agents still interpret results; this job only does repetitive HTTP/file work.
+#
+# SCHEDULE IS DISABLED BY DEFAULT.
+# When the instance is ready, uncomment the cron under `schedule:` and tune it.
+# Suggested stagger: run collector-ish fetch a few hours before humans expect
+# Curator/Analyst agent runs (see team/process.md cadence guidance).
+
+name: Fetch transform dashboard
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # Tunable: every day at 06:00 UTC (example). Uncomment to enable.
+  #   - cron: "0 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  pipeline:
+    name: Fetch → transform → dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch enabled sources (non-strict; offline-tolerant)
+        run: python scripts/fetch.py
+
+      - name: Transform raw data to processed
+        run: python scripts/transform.py
+
+      - name: Build dashboard JSON
+        run: python scripts/build_dashboard.py
+
+      - name: Commit changed data/docs if any
+        run: |
+          git config user.name "mel-bot"
+          git config user.email "mel-bot@users.noreply.github.com"
+          git add data/raw data/processed data/fetch_status.json docs/data || true
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: automated fetch/transform/dashboard"
+            git pull --rebase
+            git push
+          fi

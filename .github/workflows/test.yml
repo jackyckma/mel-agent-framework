@@ -1,0 +1,27 @@
+# Framework repo CI: unit tests + validate the shipped template (offline).
+
+name: Framework tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Pytest + validate template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: pip install -r template/requirements.txt
+
+      - name: Run unit tests
+        run: python -m pytest tests/ -q
+
+      - name: Validate template tree
+        run: python template/scripts/validate_repo.py --root template
