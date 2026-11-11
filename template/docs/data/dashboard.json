@@ -1,6 +1,8 @@
 {
   "title": "MEL dashboard",
-  "last_updated": "2026-11-11T15:24:11Z",
+  "last_updated": "2026-11-11T15:28:40Z",
+  "built_at": "2026-11-11T15:28:40Z",
+  "input_fresh_at": "2026-11-11T15:28:40Z",
   "stale": false,
   "stale_after_hours": 48.0,
   "summary": {

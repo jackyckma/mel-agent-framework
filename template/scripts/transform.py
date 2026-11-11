@@ -30,6 +30,52 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _parse_iso(ts: str) -> datetime | None:
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+
+
+def derive_input_fresh_at(root: Path, source_ids: list[str]) -> str | None:
+    """Oldest successful collection time among contributing sources.
+
+    Re-running transform on cached raw snapshots must not look "fresh". Prefer
+    `data/fetch_status.json` last_success values; fall back to raw file mtimes.
+    """
+    times: list[datetime] = []
+    status_path = root / "data" / "fetch_status.json"
+    status_sources: dict[str, Any] = {}
+    if status_path.exists():
+        try:
+            status = json.loads(status_path.read_text(encoding="utf-8"))
+            status_sources = status.get("sources") or {}
+        except json.JSONDecodeError:
+            status_sources = {}
+
+    ids = source_ids or list(status_sources.keys())
+    for sid in ids:
+        entry = status_sources.get(sid) or {}
+        parsed = _parse_iso(entry["last_success"]) if entry.get("last_success") else None
+        if parsed:
+            times.append(parsed)
+            continue
+        source_dir = root / "data" / "raw" / sid
+        if not source_dir.is_dir():
+            continue
+        candidates = list(source_dir.glob("latest.*")) + list(source_dir.glob("*"))
+        files = [p for p in candidates if p.is_file()]
+        if not files:
+            continue
+        newest = max(files, key=lambda p: p.stat().st_mtime)
+        times.append(datetime.fromtimestamp(newest.stat().st_mtime, tz=timezone.utc))
+
+    if not times:
+        return None
+    oldest = min(times)
+    return oldest.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def customise_row(source_id: str, row: dict[str, Any]) -> dict[str, Any] | None:
     """CUSTOMISE PER INSTANCE: map a raw record to a processed row, or None to drop.
 
@@ -116,10 +162,12 @@ def main(argv: list[str] | None = None) -> int:
             out_json = processed / f"{source_dir.name}.json"
             out_json.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
 
+    source_ids = sorted({r.get("source_id") for r in all_rows if r.get("source_id")})
     summary = {
-        "updated_at": utc_now(),
+        "updated_at": utc_now(),  # when this transform ran (not evidence of fresh inputs)
+        "input_fresh_at": derive_input_fresh_at(root, source_ids),
         "row_count": len(all_rows),
-        "sources": sorted({r.get("source_id") for r in all_rows if r.get("source_id")}),
+        "sources": source_ids,
     }
     (processed / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 

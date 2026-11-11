@@ -5,6 +5,10 @@
 # When the instance is ready, uncomment the cron under `schedule:` and tune it.
 # Suggested stagger: run collector-ish fetch a few hours before humans expect
 # Curator/Analyst agent runs (see team/process.md cadence guidance).
+#
+# Note: commits pushed with GITHUB_TOKEN do not trigger pages.yml's `push`
+# listener. pages.yml therefore also listens for this workflow's completion
+# (`workflow_run`) so the published dashboard updates after automation.
 
 name: Fetch transform dashboard
 

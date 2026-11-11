@@ -128,6 +128,47 @@ class TransformBuildTests(unittest.TestCase):
             dash = (root / "docs" / "data" / "dashboard.json").read_text(encoding="utf-8")
             self.assertIn("last_updated", dash)
 
+    def test_input_freshness_survives_retransform(self):
+        """Reprocessing cached raw must keep collection time, not look freshly collected."""
+        import json
+        from datetime import datetime, timezone
+
+        transform = load_module("transform", SCRIPTS / "transform.py")
+        build = load_module("build_dashboard", SCRIPTS / "build_dashboard.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw = root / "data" / "raw" / "demo"
+            raw.mkdir(parents=True)
+            (raw / "latest.json").write_text('[{"n": 1}]\n', encoding="utf-8")
+            (root / "data" / "processed").mkdir(parents=True)
+            (root / "docs" / "data").mkdir(parents=True)
+            old = "2020-01-01T00:00:00Z"
+            (root / "data" / "fetch_status.json").write_text(
+                json.dumps(
+                    {
+                        "updated_at": old,
+                        "sources": {
+                            "demo": {
+                                "last_success": old,
+                                "last_error": "URLError: offline",
+                                "last_attempt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            }
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(transform.main(["--root", str(root)]), 0)
+            summary = json.loads((root / "data" / "processed" / "summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["input_fresh_at"], old)
+            self.assertNotEqual(summary["updated_at"], old)
+            self.assertEqual(build.main(["--root", str(root), "--stale-hours", "48"]), 0)
+            dash = json.loads((root / "docs" / "data" / "dashboard.json").read_text(encoding="utf-8"))
+            self.assertEqual(dash["input_fresh_at"], old)
+            self.assertEqual(dash["last_updated"], old)
+            self.assertTrue(dash["stale"])
+
 
 if __name__ == "__main__":
     unittest.main()

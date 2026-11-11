@@ -1,6 +1,12 @@
 # Publish the static dashboard in docs/ to GitHub Pages.
 # In the instance repo: Settings → Pages → set source to GitHub Actions.
 # The framework repo itself does not host the live instance dashboard.
+#
+# Triggers:
+#   - push to main/master touching docs/ (human or non-Actions commits)
+#   - manual workflow_dispatch
+#   - after "Fetch transform dashboard" succeeds (needed because pushes made
+#     with the default GITHUB_TOKEN do not start new workflow runs)
 
 name: Deploy dashboard to GitHub Pages
 
@@ -11,6 +17,9 @@ on:
       - "docs/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Fetch transform dashboard"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -24,6 +33,10 @@ concurrency:
 jobs:
   deploy:
     name: Deploy docs/
+    # For workflow_run, only deploy when the fetch pipeline succeeded.
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -31,6 +44,9 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          # After an automated fetch, deploy the commit that workflow produced.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v4

@@ -32,7 +32,9 @@ async function loadDashboard() {
   summaryEl.textContent = `${rowCount} processed rows · sources: ${sources}`;
   updatedEl.textContent = `Last updated: ${data.last_updated || "unknown"}`;
 
-  if (data.stale) {
+  // Recompute staleness at view time so a stopped pipeline still warns visitors.
+  // Keep any explicit upstream stale flag from build_dashboard.py as well.
+  if (data.stale || isStaleAtLoad(data)) {
     staleEl.hidden = false;
   }
 
@@ -78,6 +80,16 @@ async function loadDashboard() {
     item.innerHTML = `<h3>${escapeHtml(section.title || section.id)}</h3><p>${escapeHtml(section.body || "")}</p>`;
     sectionList.appendChild(item);
   }
+}
+
+function isStaleAtLoad(data) {
+  const hours = Number(data.stale_after_hours);
+  const threshold = Number.isFinite(hours) ? hours : 48;
+  const stamp = data.input_fresh_at || data.last_updated;
+  if (!stamp) return true;
+  const then = Date.parse(stamp);
+  if (Number.isNaN(then)) return true;
+  return (Date.now() - then) / 3600000 > threshold;
 }
 
 function escapeHtml(s) {

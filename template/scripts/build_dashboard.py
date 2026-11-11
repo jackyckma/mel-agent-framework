@@ -3,6 +3,10 @@
 
 Offline-safe: always ensures docs/data/dashboard.json exists (may be empty
 series) so Pages renders without network.
+
+Freshness uses collection time (`input_fresh_at` from transform / fetch_status),
+not transform clock time, so reprocessing cached snapshots cannot look fresh.
+The browser also recomputes staleness on load (see docs/dashboard.js).
 """
 
 from __future__ import annotations
@@ -23,7 +27,17 @@ def load_summary(processed: Path) -> dict[str, Any]:
     path = processed / "summary.json"
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
-    return {"updated_at": None, "row_count": 0, "sources": []}
+    return {"updated_at": None, "input_fresh_at": None, "row_count": 0, "sources": []}
+
+
+def load_fetch_status(root: Path) -> dict[str, Any]:
+    path = root / "data" / "fetch_status.json"
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+    return {}
 
 
 def build_series(processed: Path) -> list[dict[str, Any]]:
@@ -43,6 +57,33 @@ def build_series(processed: Path) -> list[dict[str, Any]]:
     return series
 
 
+def resolve_input_fresh_at(summary: dict[str, Any], fetch_status: dict[str, Any]) -> str | None:
+    if summary.get("input_fresh_at"):
+        return summary["input_fresh_at"]
+    # Fall back: oldest last_success among sources named in the summary
+    times: list[str] = []
+    sources = fetch_status.get("sources") or {}
+    wanted = summary.get("sources") or list(sources.keys())
+    for sid in wanted:
+        entry = sources.get(sid) or {}
+        if entry.get("last_success"):
+            times.append(entry["last_success"])
+    if times:
+        return min(times)
+    return summary.get("updated_at")
+
+
+def is_stale(stamp: str | None, stale_hours: float) -> bool:
+    if not stamp:
+        return True
+    try:
+        then = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        age_h = (datetime.now(timezone.utc) - then.astimezone(timezone.utc)).total_seconds() / 3600.0
+        return age_h > stale_hours
+    except (TypeError, ValueError):
+        return True
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build dashboard JSON under docs/data/")
     parser.add_argument("--root", type=Path, default=Path("."))
@@ -50,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         "--stale-hours",
         type=float,
         default=48.0,
-        help="Mark dashboard stale if processed summary older than this many hours",
+        help="Mark dashboard stale if input freshness older than this many hours",
     )
     args = parser.parse_args(argv)
     root = args.root.resolve()
@@ -59,22 +100,18 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     summary = load_summary(processed)
+    fetch_status = load_fetch_status(root)
     series = build_series(processed)
-    updated = summary.get("updated_at") or utc_now()
-    stale = False
-    try:
-        # Compare age when timestamp present
-        if summary.get("updated_at"):
-            ts = summary["updated_at"].replace("Z", "+00:00")
-            then = datetime.fromisoformat(ts)
-            age_h = (datetime.now(timezone.utc) - then.astimezone(timezone.utc)).total_seconds() / 3600.0
-            stale = age_h > args.stale_hours
-    except (TypeError, ValueError):
-        stale = True
+    input_fresh_at = resolve_input_fresh_at(summary, fetch_status)
+    # last_updated reflects observation freshness, not transform/build clock
+    last_updated = input_fresh_at or summary.get("updated_at") or utc_now()
+    stale = is_stale(input_fresh_at or last_updated, args.stale_hours)
 
     dashboard = {
         "title": "MEL dashboard",
-        "last_updated": updated,
+        "last_updated": last_updated,
+        "built_at": utc_now(),
+        "input_fresh_at": input_fresh_at,
         "stale": stale,
         "stale_after_hours": args.stale_hours,
         "summary": {
