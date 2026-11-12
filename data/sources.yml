@@ -1,0 +1,20 @@
+# Instance sources configuration (JSON-compatible YAML subset).
+# Replace example entries at instantiation. Keep secrets out of this file.
+#
+# Schema per source:
+#   id:          stable slug (folder name under data/raw/)
+#   name:        human label
+#   url:         HTTP(S) endpoint returning JSON or CSV
+#   format:      json | csv
+#   enabled:     true | false
+#   example:     true if this is a non-mandate demo entry
+#   notes:       optional
+
+sources:
+  - id: example-jsonplaceholder
+    name: "EXAMPLE ONLY — JSONPlaceholder todos (not a mandate source)"
+    url: "https://jsonplaceholder.typicode.com/todos"
+    format: json
+    enabled: false
+    example: true
+    notes: "Disabled by default. Enable only for connectivity tests. Not part of any MEL mandate."

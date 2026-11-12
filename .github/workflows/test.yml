@@ -1,0 +1,29 @@
+# Framework-only CI: unit tests. Must not run (or fail) on instance repos
+# created from this template — gate on the canonical framework repository.
+
+name: Framework tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Pytest + validate instance skeleton
+    if: github.repository == 'jackyckma/mel-agent-framework'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m pytest framework/tests/ -q
+
+      - name: Validate instance skeleton at repo root
+        run: python scripts/validate_repo.py

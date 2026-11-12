@@ -1,0 +1,25 @@
+# Validate instance structure and board messages on every push and pull request.
+# Runs scripts/validate_repo.py (no network required). Safe for every instance
+# created from this template.
+
+name: Validate repo
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    name: Run validate_repo.py
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate structure and board frontmatter
+        run: python scripts/validate_repo.py

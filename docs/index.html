@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MEL dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="dashboard.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <p class="brand">MEL dashboard</p>
+    <p id="last-updated" class="meta">Last updated: —</p>
+    <p id="stale-warning" class="stale" hidden>Data may be stale — check Collector/Curator board messages.</p>
+  </header>
+
+  <main>
+    <section id="summary" class="summary" aria-live="polite">
+      <h1 id="dash-title">Loading…</h1>
+      <p id="summary-line"></p>
+    </section>
+
+    <section id="charts" class="charts"></section>
+
+    <section id="sections" class="sections">
+      <h2>Sections</h2>
+      <div id="section-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Static shell for GitHub Pages. Curator updates <code>docs/data/*.json</code> via scripts.</p>
+  </footer>
+</body>
+</html>

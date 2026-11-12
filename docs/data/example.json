@@ -1,0 +1,33 @@
+{
+  "title": "MEL dashboard (example data)",
+  "last_updated": "2026-11-11T12:00:00Z",
+  "built_at": "2026-11-11T12:00:00Z",
+  "input_fresh_at": "2026-11-11T12:00:00Z",
+  "stale": false,
+  "stale_after_hours": 48,
+  "summary": {
+    "row_count": 3,
+    "sources": ["example-alpha", "example-beta"]
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "body": "Example section — replace via Curator / build_dashboard.py for the instance."
+    },
+    {
+      "id": "notes",
+      "title": "Notes",
+      "body": "This file ships so the Pages shell renders out of the box."
+    }
+  ],
+  "charts": [
+    {
+      "id": "rows-by-source",
+      "title": "Processed rows by source",
+      "type": "bar",
+      "labels": ["example-alpha", "example-beta"],
+      "values": [2, 1]
+    }
+  ]
+}
