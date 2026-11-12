@@ -19,7 +19,7 @@ Workflow files live in `.github/workflows/*.yml` and are commented in plain Engl
 1. **`validate.yml`** — On push/PR, run `scripts/validate_repo.py` so board filenames and required structure stay healthy.
 2. **`pages.yml`** — Deploy the static `docs/` dashboard to **GitHub Pages**.
 3. **`fetch.yml`** — Optionally run fetch → transform → build dashboard on a schedule, then commit if files changed. **Disabled (commented) by default** in the template until an instance turns it on.
-4. **`merge-agent-branches.yml`** — When an agent pushes a `claude/*` branch, validate it (using **main**’s checker scripts), reject protected-path edits, merge into `main`, delete the branch, and dispatch Pages. If this workflow shows **red** in the Actions tab, tell the MEL Lead — work may not have landed on `main`.
+4. **`merge-agent-trigger.yml` + `merge-agent-branches.yml`** — When an agent pushes a `claude/*` branch, a thin trigger (no repo-write permission) asks **main** to run the privileged merge workflow. That job validates (using **main**’s checker scripts), rejects protected-path edits, merges/sweeps eligible `claude/*` tips into `main`, deletes merged branches, and dispatches Pages. If **Merge agent branches** shows **red** in the Actions tab, tell the MEL Lead — work may not have landed on `main`.
 
 Why Actions? Reliable mechanical work (download, convert, publish, merge) without spending a Claude agent run. Agents still **decide and interpret**; they review script output on the board and in `data/`.
 

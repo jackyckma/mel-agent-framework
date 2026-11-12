@@ -55,7 +55,7 @@ Observed on **2026-11-12** against a real instance created from this template (`
 
 2. **Push only to `claude/*`, not main.** A repo-bound scheduled run starts on a fresh branch `claude/<random>` with **no upstream tracking**. It may push **only** to that branch. `git pull --rebase` fails without tracking info; pushing to `main` is refused. A run that “succeeds” in the task list may still have produced **nothing** on `main`. **Success must be verified in the repo** (branch → Merge agent branches → files on `main`), never by task status alone.
 
-Design response: run protocol uses `fetch` + rebase/ff onto `origin/main` and `git push -u origin HEAD`; `.github/workflows/merge-agent-branches.yml` merges after validation and protected-path checks; Lead watches stuck `claude/*` branches.
+Design response: run protocol uses `fetch` + rebase/ff onto `origin/main` and `git push -u origin HEAD`; a **low-privilege** `merge-agent-trigger.yml` (actions:write only) dispatches **`merge-agent-branches.yml` on `main`** (`workflow_dispatch --ref main`) so the privileged gate always runs from the trusted revision; each merge run **sweeps** eligible `claude/*` tips; protected-path checks cover gate scripts and rename sources; Lead watches stuck `claude/*` branches.
 
 ## Success criteria for the prototype
 

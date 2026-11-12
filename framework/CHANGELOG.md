@@ -14,8 +14,9 @@ Format: Keep a Changelog. Versioning: SemVer.
 
 ### Added
 
-- `.github/workflows/merge-agent-branches.yml` — validate + protected-path guard + merge `claude/**` into `main`, then dispatch Pages.
-- `scripts/check_protected_paths.py` (+ unit tests).
+- `.github/workflows/merge-agent-trigger.yml` — low-privilege dispatch only (`actions: write`).
+- `.github/workflows/merge-agent-branches.yml` — privileged gate via `workflow_dispatch` on **main**; validates; protected-path guard; merges/sweeps `claude/*`; dispatches Pages.
+- `scripts/check_protected_paths.py` (+ unit tests): blocks `.github/**`, `framework/**`, `FRAMEWORK_VERSION`, `team/roles/_base/**`, gate scripts; rename-aware.
 - `team/SETUP_STATUS.md` checklist for multi-chat setup resume.
 - `framework/prompts/onboarding-lead.md`.
 - Lead duty: escalate remote `claude/*` branches older than 24h not on `main`.

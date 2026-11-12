@@ -57,6 +57,20 @@ class ProtectedPathsTests(unittest.TestCase):
             ],
         )
 
+    def test_blocks_gate_scripts(self):
+        hits = guard.protected_hits(
+            ["scripts/validate_repo.py", "scripts/check_protected_paths.py", "scripts/fetch.py"]
+        )
+        self.assertEqual(
+            hits,
+            ["scripts/check_protected_paths.py", "scripts/validate_repo.py"],
+        )
+
+    def test_rename_out_of_framework_caught_when_both_paths_listed(self):
+        # Simulates --no-renames output: delete old + add new
+        hits = guard.protected_hits(["framework/example.md", "moved.md"])
+        self.assertIn("framework/example.md", hits)
+
     def test_cli_files_ok(self):
         self.assertEqual(guard.main(["--files", "agents/scout/state.md"]), 0)
 

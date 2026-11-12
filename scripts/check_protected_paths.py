@@ -6,6 +6,12 @@ Protected (agent branches must not touch):
   - framework/**
   - FRAMEWORK_VERSION
   - team/roles/_base/**
+  - scripts/check_protected_paths.py
+  - scripts/validate_repo.py
+    (gate scripts: once landed on main they would police future merges)
+
+Rename-aware: uses `git diff --name-status --no-renames` so a protected file
+moved to an unprotected path still fails (delete + add both listed).
 
 Usage:
   python scripts/check_protected_paths.py --base origin/main --head origin/claude/abc
@@ -20,7 +26,13 @@ import sys
 from pathlib import Path
 
 
-PROTECTED_EXACT = frozenset({"FRAMEWORK_VERSION"})
+PROTECTED_EXACT = frozenset(
+    {
+        "FRAMEWORK_VERSION",
+        "scripts/check_protected_paths.py",
+        "scripts/validate_repo.py",
+    }
+)
 PROTECTED_PREFIXES = (
     ".github/",
     "framework/",
@@ -42,8 +54,9 @@ def protected_hits(paths: list[str]) -> list[str]:
 
 
 def list_changed_files(base: str, head: str, repo: Path) -> list[str]:
+    """Return all touched paths, including rename sources (via --no-renames)."""
     proc = subprocess.run(
-        ["git", "diff", "--name-only", f"{base}...{head}"],
+        ["git", "diff", "--name-status", "--no-renames", f"{base}...{head}"],
         cwd=repo,
         check=False,
         capture_output=True,
@@ -51,7 +64,21 @@ def list_changed_files(base: str, head: str, repo: Path) -> list[str]:
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "git diff failed")
-    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    paths: list[str] = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # Formats: "M\tpath", "A\tpath", "D\tpath", "C100\told\tnew", etc.
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        # status is parts[0]; remaining are paths
+        for p in parts[1:]:
+            p = p.strip()
+            if p:
+                paths.append(p)
+    return paths
 
 
 def main(argv: list[str] | None = None) -> int:

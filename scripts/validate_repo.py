@@ -77,6 +77,7 @@ REQUIRED_PATHS = [
     "scripts/validate_repo.py",
     "scripts/check_protected_paths.py",
     ".github/workflows/merge-agent-branches.yml",
+    ".github/workflows/merge-agent-trigger.yml",
 ]
 
 REQUIRED_ROLES = [

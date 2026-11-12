@@ -1,22 +1,26 @@
-# Merge Claude agent working branches (claude/*) into main after checks.
+# Privileged merge gate — always executed from MAIN's workflow revision.
 #
-# Why this exists: repo-bound Claude Scheduled Tasks start on a fresh
-# claude/<random> branch and can push ONLY to that branch — not main.
-# This workflow is the sanctioned path onto main. Agents must never open PRs
-# or force-push.
+# Triggered only via workflow_dispatch (from merge-agent-trigger.yml with
+# --ref main). Do NOT add a `push: claude/**` trigger here: GitHub would then
+# run the agent branch's copy of this file, which could strip the guards while
+# keeping contents:write.
 #
-# On conflict, validation failure, or protected-path changes: we do NOT merge;
-# the claude/* branch stays for the Lead/human to inspect (red Action run).
+# Each run merges the requested branch (if any), then sweeps other remote
+# claude/* tips not yet on main so canceled/queued sibling pushes are not lost.
 #
-# If the owner later lets Claude push straight to main, this workflow is
-# harmless: it only listens to pushes under claude/**.
+# On conflict / validation / protected-path failure for a branch: skip that
+# branch (leave it), continue sweeping others, and fail the job at the end if
+# any branch failed — so the Action stays red for the Lead.
 
 name: Merge agent branches
 
 on:
-  push:
-    branches:
-      - "claude/**"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Primary claude/* branch that was just pushed (optional sweep still runs)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -37,63 +41,124 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Remember which agent branch was pushed
-        id: meta
-        run: |
-          echo "branch=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Agent branch: ${GITHUB_REF_NAME}"
-
-      - name: Fetch the agent branch
-        run: git fetch origin "${{ steps.meta.outputs.branch }}"
-
-      - name: Freeze MAIN's checker scripts (agents must not gate themselves)
-        run: |
-          mkdir -p /tmp/mel-gate
-          cp scripts/validate_repo.py scripts/check_protected_paths.py /tmp/mel-gate/
-          # yaml_util is imported only if needed; validate_repo is standalone
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Protected-path guard (fail = no merge)
+      - name: Freeze MAIN's checker scripts
         run: |
-          python /tmp/mel-gate/check_protected_paths.py \
-            --base origin/main \
-            --head "origin/${{ steps.meta.outputs.branch }}"
+          mkdir -p /tmp/mel-gate
+          cp scripts/validate_repo.py scripts/check_protected_paths.py /tmp/mel-gate/
 
-      - name: Merge agent branch into local main
+      - name: Configure git identity
         run: |
           git config user.name "mel-merge-bot"
           git config user.email "mel-merge-bot@users.noreply.github.com"
-          BRANCH="${{ steps.meta.outputs.branch }}"
-          if git merge-base --is-ancestor "origin/${BRANCH}" HEAD; then
-            echo "Branch already contained in main; nothing to merge."
-            echo "already=1" >> "$GITHUB_ENV"
-          else
-            # Fast-forward when possible; otherwise a merge commit.
-            if git merge --ff-only "origin/${BRANCH}"; then
-              echo "Fast-forward merge OK."
-            else
-              git merge --no-ff "origin/${BRANCH}" -m "merge: ${BRANCH} into main"
+
+      - name: Fetch remotes and merge eligible claude/* branches
+        id: merge
+        env:
+          PRIMARY: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          git fetch origin --prune
+
+          # Validate primary name
+          case "${PRIMARY}" in
+            claude/*) ;;
+            *)
+              echo "Invalid branch input: ${PRIMARY}"
+              exit 1
+              ;;
+          esac
+
+          # Build unique list: primary first, then every other origin/claude/*
+          mapfile -t ALL < <(
+            {
+              echo "${PRIMARY}"
+              git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ \
+                | sed 's#^origin/##'
+            } | awk 'NF && !seen[$0]++'
+          )
+
+          MERGED=0
+          FAILED=0
+          FAILED_LIST=""
+
+          try_merge_one() {
+            local BRANCH="$1"
+            echo "::group::Consider ${BRANCH}"
+            if ! git rev-parse --verify "origin/${BRANCH}" >/dev/null 2>&1; then
+              echo "Remote tip missing for ${BRANCH}; skip."
+              echo "::endgroup::"
+              return 0
             fi
-            echo "already=0" >> "$GITHUB_ENV"
+            if git merge-base --is-ancestor "origin/${BRANCH}" origin/main; then
+              echo "Already contained in origin/main; deleting remote branch if present."
+              git push origin --delete "${BRANCH}" 2>/dev/null || true
+              echo "::endgroup::"
+              return 0
+            fi
+
+            # Reset local main to origin/main before each attempt
+            git checkout -B main origin/main
+
+            if ! python /tmp/mel-gate/check_protected_paths.py \
+                --base origin/main \
+                --head "origin/${BRANCH}"; then
+              echo "Protected-path guard failed for ${BRANCH}"
+              FAILED=$((FAILED + 1))
+              FAILED_LIST="${FAILED_LIST} ${BRANCH}"
+              echo "::endgroup::"
+              return 0
+            fi
+
+            if git merge --ff-only "origin/${BRANCH}"; then
+              echo "Fast-forward OK: ${BRANCH}"
+            else
+              if ! git merge --no-ff "origin/${BRANCH}" -m "merge: ${BRANCH} into main"; then
+                echo "Merge conflict for ${BRANCH}; aborting this branch only."
+                git merge --abort 2>/dev/null || true
+                git checkout -B main origin/main
+                FAILED=$((FAILED + 1))
+                FAILED_LIST="${FAILED_LIST} ${BRANCH}"
+                echo "::endgroup::"
+                return 0
+              fi
+            fi
+
+            if ! python /tmp/mel-gate/validate_repo.py; then
+              echo "validate_repo failed after merging ${BRANCH}; resetting."
+              git reset --hard origin/main
+              FAILED=$((FAILED + 1))
+              FAILED_LIST="${FAILED_LIST} ${BRANCH}"
+              echo "::endgroup::"
+              return 0
+            fi
+
+            git push origin HEAD:main
+            git fetch origin main
+            git push origin --delete "${BRANCH}" 2>/dev/null || true
+            MERGED=$((MERGED + 1))
+            echo "::endgroup::"
+          }
+
+          for BRANCH in "${ALL[@]}"; do
+            try_merge_one "${BRANCH}"
+          done
+
+          echo "merged_count=${MERGED}" >> "$GITHUB_OUTPUT"
+          echo "failed_count=${FAILED}" >> "$GITHUB_OUTPUT"
+          echo "failed_list=${FAILED_LIST}" >> "$GITHUB_OUTPUT"
+          echo "Merged=${MERGED} Failed=${FAILED} (${FAILED_LIST})"
+
+          if [ "${FAILED}" -gt 0 ]; then
+            exit 1
           fi
 
-      - name: Validate merged tree with MAIN's validator
-        run: python /tmp/mel-gate/validate_repo.py
-
-      - name: Push main
-        if: env.already != '1'
-        run: git push origin HEAD:main
-
-      - name: Delete the merged agent branch
-        if: env.already != '1'
-        run: git push origin --delete "${{ steps.meta.outputs.branch }}"
-
-      - name: Dispatch Pages deploy (GITHUB_TOKEN push does not trigger push workflows)
-        if: env.already != '1'
+      - name: Dispatch Pages deploy if anything merged
+        if: steps.merge.outputs.merged_count != '0'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

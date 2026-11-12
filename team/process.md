@@ -31,7 +31,7 @@ Interactive Lead chat: same git rules if the session writes via a bound `claude/
 | Path | Who may write |
 |------|----------------|
 | `team/mandate.md`, `team/process.md`, `team/roles/*.md` (not `_base/`), `team/projects/`, `team/SETUP_STATUS.md` | **MEL Lead only** (others propose via board; interactive Lead only on **explicit** human instruction) |
-| `team/roles/_base/`, `FRAMEWORK_VERSION`, `framework/`, `.github/` | **Nobody** in normal agent runs — only Lead-led, **human-approved** framework sync. Agents never edit these; the merge workflow **rejects** branches that touch them. |
+| `team/roles/_base/`, `FRAMEWORK_VERSION`, `framework/`, `.github/`, `scripts/validate_repo.py`, `scripts/check_protected_paths.py` | **Nobody** in normal agent runs — only Lead-led, **human-approved** framework sync. Agents never edit these; the merge workflow **rejects** branches that touch them (including renames out of protected trees). |
 | `team/board/*.md` (new messages) | **Any agent**; human instructions recorded as `from: human` (via Lead chat or human/Lead) |
 | `team/board/archive/` | **MEL Lead** (archive closed messages) |
 | `team/framework-feedback/` | **MEL Lead** (consolidates); agents file board `framework-feedback` first |
