@@ -4,7 +4,7 @@ A **reusable GitHub template** for a team of AI agents that run a Monitoring, Ev
 
 This repository **is** the template: root layout is a ready-to-use **instance skeleton**. Topic-specific slots use `{{placeholders}}`. Framework-only docs and prompts live under `framework/`.
 
-**Version:** see root `FRAMEWORK_VERSION` (currently `0.1.0`).
+**Version:** see root `FRAMEWORK_VERSION` (currently `0.2.0`).
 
 ## Why framework vs instance?
 
@@ -79,11 +79,12 @@ Owner must enable **Template repository** in Settings (manual).
 ├── team/  agents/  data/     # instance operating tree
 ├── docs/                     # GitHub Pages dashboard (NOT framework prose)
 ├── scripts/  requirements.txt
-├── .github/workflows/        # validate, pages, fetch (+ guarded framework tests)
+├── team/SETUP_STATUS.md      # onboarding checklist (resume across chats)
+├── .github/workflows/        # validate, pages, fetch, merge-agent-branches (+ guarded tests)
 └── framework/
     ├── README.md, INSTANTIATE.md, CHANGELOG.md
     ├── docs/                 # DESIGN, OPERATING_GUIDE, Actions primer, BUILD_BRIEF
-    ├── prompts/              # thin bootstraps (incl. interactive Lead chat)
+    ├── prompts/              # bootstraps + onboarding-lead + mel-lead-chat
     └── tests/                # unit tests (framework CI only)
 ```
 

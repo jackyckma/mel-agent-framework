@@ -5,8 +5,6 @@ Run from the **repo root** (instance skeleton):
 ```bash
 pip install -r requirements.txt
 python -m pytest framework/tests/ -q
-# or:
-python -m unittest framework.tests.test_validate_repo -v
 ```
 
 Also:

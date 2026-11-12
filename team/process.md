@@ -4,24 +4,34 @@ Topic-neutral. Every agent reads this at the start of every run. Instance cadenc
 
 ## Run protocol
 
-On **every** run:
+Claude Scheduled Tasks that bind a GitHub **Repository** start on a fresh `claude/<random>` branch with **no upstream tracking**. They may push **only** to that branch — not to `main`. Observed 2026-11-12 on a live instance (see `framework/docs/DESIGN.md`).
 
-1. **`git pull --rebase`** (never force-push).
+On **every** scheduled run:
+
+1. **Sync from main (do not `git pull --rebase` against a missing upstream):**
+   - `git fetch origin main`
+   - Bring this branch up to date: `git rebase origin/main` **or** `git merge --ff-only origin/main`
 2. **Read:** this file; your instance role doc and its `_base` role; your `agents/<role>/state.md`; `team/mandate.md`; open board messages addressed to you (and `to: all` if present). Also read open `from: human` messages when you are Lead.
 3. **Do the work** those documents describe for this run.
 4. **Write only** to folders you own (see Ownership). Collector/Curator also write allowed `data/` / `docs/` paths when judging or correcting Action outputs.
 5. **Post board messages** when you assign work, ask questions, block, or propose changes.
 6. **Update** `agents/<role>/state.md` and **append** a run-log entry under `agents/<role>/runs/YYYY-MM.md`.
-7. **Commit** in small logical commits; `git pull --rebase`; **push**. On conflict: resolve, rebase again, push. **Never force-push.**
+7. **Commit** in small logical commits; then again `git fetch origin main` and `git rebase origin/main` (or `git merge --ff-only origin/main`); then **`git push -u origin HEAD`** (first push of this branch needs `-u`).  
+   - Push **only** your current `claude/*` branch. **Never** push to `main`. **Never** force-push. **Never** open pull requests — `.github/workflows/merge-agent-branches.yml` merges into `main` after validation.
+8. If rebase/merge conflicts cannot be resolved safely: stop, leave the branch, board `blocker` to Lead. Do not force-push.
 
 If there is nothing useful to do: append a **no-op** run-log line, leave working tree clean, exit. Do not make churn commits.
+
+**Success is verified in the repo, not in the task UI.** A scheduled task may show “success” while nothing landed on `main`. Confirm: a `claude/*` branch was pushed, **Merge agent branches** merged it into `main`, and your run-log (or other owned files) appear on `main`.
+
+Interactive Lead chat: same git rules if the session writes via a bound `claude/*` branch. If a sanctioned path can write files another way (e.g. a connector), use that — still never force-push or rewrite protected paths.
 
 ## Ownership table
 
 | Path | Who may write |
 |------|----------------|
-| `team/mandate.md`, `team/process.md`, `team/roles/*.md` (not `_base/`), `team/projects/` | **MEL Lead only** (others propose via board; interactive Lead only on **explicit** human instruction) |
-| `team/roles/_base/`, `FRAMEWORK_VERSION`, `framework/` | **Nobody** in normal runs — only Lead-led, **human-approved** framework sync. Agents never edit `framework/`. |
+| `team/mandate.md`, `team/process.md`, `team/roles/*.md` (not `_base/`), `team/projects/`, `team/SETUP_STATUS.md` | **MEL Lead only** (others propose via board; interactive Lead only on **explicit** human instruction) |
+| `team/roles/_base/`, `FRAMEWORK_VERSION`, `framework/`, `.github/`, `scripts/validate_repo.py`, `scripts/check_protected_paths.py` | **Nobody** in normal agent runs — only Lead-led, **human-approved** framework sync. Agents never edit these; the merge workflow **rejects** branches that touch them (including renames out of protected trees). |
 | `team/board/*.md` (new messages) | **Any agent**; human instructions recorded as `from: human` (via Lead chat or human/Lead) |
 | `team/board/archive/` | **MEL Lead** (archive closed messages) |
 | `team/framework-feedback/` | **MEL Lead** (consolidates); agents file board `framework-feedback` first |
@@ -29,7 +39,7 @@ If there is nothing useful to do: append a **no-op** run-log line, leave working
 | `data/raw/`, `data/fetch_status.json` | **Data Collector** owns judgment; **GitHub Actions (`fetch.yml`)** is the mechanical arm that writes snapshots when scheduled. Collector reviews Action results — does not need to trigger HTTP fetch itself. |
 | `data/sources.yml` structural changes | Propose to Lead |
 | `data/processed/`, `docs/data/` (and dashboard shell under `docs/` as needed) | **Data Curator** owns judgment; **Actions** (`transform` / `build_dashboard` in `fetch.yml`) is the mechanical arm. Curator reviews outputs. |
-| `scripts/`, `.github/workflows/` | Lead coordinates; agents may propose patches via board — **human or Lead** merges policy for the instance |
+| `scripts/` (non-protected day-to-day) | Lead coordinates; agents may propose patches via board — **human or Lead** merges policy for the instance |
 | Secrets / credentials | **Never** commit |
 
 ## Board protocol
@@ -101,8 +111,11 @@ Re-running with no new upstream data should not rewrite large artefacts. Prefer 
 | Situation | Action |
 |-----------|--------|
 | Fetch failed / upstream stale | Board `blocker` or `info` + run-log error; Collector reviews `data/fetch_status.json` from Actions |
-| Merge conflict | Rebase retry; if stuck, board `blocker` to Lead |
+| Rebase conflict on `claude/*` | Stop; board `blocker` to Lead; leave branch for merge workflow / human |
+| **Merge agent branches** Action red / stuck | Lead: list remote `claude/*` not on `main` older than **24h**; board `blocker` + `needs-human`. Work that never lands on `main` is silent loss. |
 | Unclear mandate | Board `question` to Lead — do not guess past scope |
+
+If the owner later enables a Claude setting that lets routines push straight to `main`, `merge-agent-branches.yml` stays harmless (it only listens to `claude/**`).
 
 ## Dependency and freshness
 
@@ -129,7 +142,7 @@ Each downstream agent checks upstream output timestamps (files under `data/` or 
 
 ## Framework sync
 
-When a newer framework version exists: Lead drafts a **proposal**, lists files to refresh under `framework/` and any root skeleton updates, human approves, Lead applies copy-not-link update and bumps instance `FRAMEWORK_VERSION`. No submodules.
+When a newer framework version exists: Lead drafts a **proposal**, lists files to refresh under `framework/` and any root skeleton updates, human approves, Lead applies copy-not-link update and bumps instance `FRAMEWORK_VERSION`. No submodules. Normal agent branches that touch `framework/`, `.github/`, `FRAMEWORK_VERSION`, or `team/roles/_base/` are **rejected** by the merge guard.
 
 ## Cadence guidance (tunable per instance)
 

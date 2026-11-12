@@ -1,0 +1,53 @@
+# Thin, low-privilege trigger only.
+#
+# Runs from the pushed claude/* commit, so it MUST NOT have contents:write.
+# Its only job is to ask MAIN's privileged workflow to merge (workflow_dispatch
+# with --ref main). That way agents cannot rewrite the merge gate they are
+# subject to by editing merge-agent-branches.yml on their branch.
+#
+# Residual risk: an agent could add a *new* malicious workflow file under
+# .github/ on the same push (also triggered from the branch). Merging such a
+# file into main is blocked by the protected-path guard; for the current run,
+# keep agent permissions tight and review red Actions. Prefer org policies that
+# limit workflow permissions where available.
+
+name: Trigger merge agent branch
+
+on:
+  push:
+    branches:
+      - "claude/**"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  # Serialize triggers so we do not stampede dispatches; pending triggers wait.
+  # Prefer not canceling in-flight dispatches.
+  group: merge-agent-trigger
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch privileged merge on main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask main to merge this branch (and sweep others)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BRANCH="${GITHUB_REF_NAME}"
+          case "${BRANCH}" in
+            claude/*) ;;
+            *)
+              echo "Refusing non-claude branch: ${BRANCH}"
+              exit 1
+              ;;
+          esac
+          # Always target the workflow file on main — never the agent revision.
+          gh workflow run merge-agent-branches.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main \
+            -f branch="${BRANCH}"
