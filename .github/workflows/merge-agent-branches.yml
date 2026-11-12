@@ -84,7 +84,9 @@ jobs:
 
           MERGED=0
           FAILED=0
+          FAILED_RETRYABLE=0
           FAILED_LIST=""
+          RETRYABLE_LIST=""
 
           try_merge_one() {
             local BRANCH="$1"
@@ -137,10 +139,22 @@ jobs:
               return 0
             fi
 
-            git push origin HEAD:main
-            git fetch origin main
-            git push origin --delete "${BRANCH}" 2>/dev/null || true
-            MERGED=$((MERGED + 1))
+            # Push race: another merge may have advanced main. Do NOT abort the
+            # whole loop under set -e — wrap the push, resync, mark retryable.
+            if git push origin HEAD:main; then
+              git fetch origin main
+              git push origin --delete "${BRANCH}" 2>/dev/null || true
+              MERGED=$((MERGED + 1))
+            else
+              echo "Push to main failed for ${BRANCH} (likely non-ff race); resyncing."
+              git fetch origin main
+              git reset --hard origin/main
+              FAILED=$((FAILED + 1))
+              FAILED_RETRYABLE=$((FAILED_RETRYABLE + 1))
+              FAILED_LIST="${FAILED_LIST} ${BRANCH}"
+              RETRYABLE_LIST="${RETRYABLE_LIST} ${BRANCH}"
+              # Leave remote claude/* branch in place for a later sweep/re-run.
+            fi
             echo "::endgroup::"
           }
 
@@ -150,8 +164,10 @@ jobs:
 
           echo "merged_count=${MERGED}" >> "$GITHUB_OUTPUT"
           echo "failed_count=${FAILED}" >> "$GITHUB_OUTPUT"
+          echo "failed_retryable_count=${FAILED_RETRYABLE}" >> "$GITHUB_OUTPUT"
           echo "failed_list=${FAILED_LIST}" >> "$GITHUB_OUTPUT"
-          echo "Merged=${MERGED} Failed=${FAILED} (${FAILED_LIST})"
+          echo "retryable_list=${RETRYABLE_LIST}" >> "$GITHUB_OUTPUT"
+          echo "Merged=${MERGED} Failed=${FAILED} retryable=${FAILED_RETRYABLE} (${FAILED_LIST})"
 
           if [ "${FAILED}" -gt 0 ]; then
             exit 1

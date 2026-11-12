@@ -4,7 +4,7 @@ A **reusable GitHub template** for a team of AI agents that run a Monitoring, Ev
 
 This repository **is** the template: root layout is a ready-to-use **instance skeleton**. Topic-specific slots use `{{placeholders}}`. Framework-only docs and prompts live under `framework/`.
 
-**Version:** see root `FRAMEWORK_VERSION` (currently `0.2.0`).
+**Version:** see root `FRAMEWORK_VERSION` (currently `0.3.0`).
 
 ## Why framework vs instance?
 
@@ -61,15 +61,15 @@ flowchart TB
 5. **Human gates** — anything leaving the team stays draft until the human approves via the Lead.
 6. **Public-repo hygiene** — never commit secrets or sensitive personal data.
 
-## Quick start (maintainers of this framework)
+## Quick start — stand up an instance in one Claude chat
 
-1. Read `framework/docs/DESIGN.md`.
-2. Read `framework/docs/OPERATING_GUIDE.md`.
-3. To stand up a topic instance: follow `framework/INSTANTIATE.md` (Use this template → fill slots → Pages → Scheduled Tasks).
-4. Bootstrap prompts: `framework/prompts/`.
-5. Actions primer: `framework/docs/GITHUB_ACTIONS_PRIMER.md`.
+1. Ensure this framework repo is a **Template repository** (Settings; **[Admin]**).
+2. Open a **new Claude chat** with your **GitHub connector**.
+3. Paste `framework/prompts/STARTER_PROMPT.md` (the block below the line).
+4. Follow the chat: it loads `framework/INSTANTIATE.md` / `onboarding-lead.md`, creates the instance from this template, then guides mandate, Settings, and Scheduled Task paste-blocks.
+5. **[Owner]** creates each Scheduled Task in the Claude **UI** with **Repository** = the instance repo (chat/API tasks cannot push).
 
-Owner must enable **Template repository** in Settings (manual).
+Operator guide: `framework/docs/OPERATING_GUIDE.md`. Design: `framework/docs/DESIGN.md`. Actions primer: `framework/docs/GITHUB_ACTIONS_PRIMER.md`.
 
 ## Repository map
 
@@ -84,7 +84,7 @@ Owner must enable **Template repository** in Settings (manual).
 └── framework/
     ├── README.md, INSTANTIATE.md, CHANGELOG.md
     ├── docs/                 # DESIGN, OPERATING_GUIDE, Actions primer, BUILD_BRIEF
-    ├── prompts/              # bootstraps + onboarding-lead + mel-lead-chat
+    ├── prompts/              # STARTER_PROMPT + bootstraps + onboarding-lead + mel-lead-chat
     └── tests/                # unit tests (framework CI only)
 ```
 
