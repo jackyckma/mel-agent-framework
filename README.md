@@ -13,6 +13,7 @@ This is an **instance** repo for a Monitoring, Evaluation & Learning (MEL) agent
 
 - Mandate: [`team/mandate.md`](team/mandate.md)
 - How the team works: [`team/process.md`](team/process.md)
+- Setup checklist: [`team/SETUP_STATUS.md`](team/SETUP_STATUS.md)
 - Operator guide (plain English): [`framework/docs/OPERATING_GUIDE.md`](framework/docs/OPERATING_GUIDE.md)
 - Dashboard (GitHub Pages): [`docs/`](docs/)
 

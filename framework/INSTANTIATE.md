@@ -1,116 +1,93 @@
-# Instantiate a MEL agent-team instance
+# Instantiate (onboarding Lead script)
 
-Use this guide in a Claude chat with a human operator. The chat interviews the human, fills placeholders in the new instance repo, and outputs bootstrap prompts and schedules. Keep language plain.
+Conversational script for a Claude **chat** session (“onboarding Lead”). Goal: the COO finishes setup mostly inside one chat (or a few, resumed via `team/SETUP_STATUS.md`). Keep language plain. Topic-neutral.
 
-## Placeholders (complete list)
+**Hard lesson (observed 2026-11-12):** a Claude scheduled task can bind a GitHub repo **only when created in the Claude app UI** (New scheduled task → Advanced settings → General → **Repository**; the form says picking a repository makes it a “Claude Code task”). Tasks created through Claude’s tool API have **no** repository field; their `git push` is refused (“repository is not in this session's authorized repository set”). Editing an existing task later shows “Local folder” instead of Repository — we **believe** the type cannot be changed after creation (**inferred from the UI, not officially documented**). Therefore: **this chat must NOT create role tasks itself.** It outputs paste-ready blocks; the **human** creates each task with Repository = instance repo.
 
-Replace every `{{…}}` when creating an instance:
+## Placeholders
 
-| Placeholder | Meaning |
-|-------------|---------|
-| `{{TOPIC}}` | Short topic name |
-| `{{PURPOSE}}` | Why this MEL team exists |
-| `{{AUDIENCE}}` | Who reads the outputs |
-| `{{DECISIONS_INFORMED}}` | Decisions the outputs should inform |
-| `{{SCOPE}}` | In scope |
-| `{{OUT_OF_SCOPE}}` | Explicitly out of scope |
-| `{{REPO_URL}}` | Instance GitHub repo URL (HTTPS) |
-| `{{REPO_NAME}}` | Instance repo name |
-| `{{ORG_OR_USER}}` | GitHub org or user that owns the repo |
-| `{{ROLE_NAME}}` | Display name of the role for a bootstrap prompt |
-| `{{ROLE_SLUG}}` | Folder slug under `agents/` (e.g. `mel-lead`) |
-| `{{ROLE_DOC}}` | Path to instance role doc (e.g. `team/roles/mel-lead.md`) |
-| `{{BASE_ROLE_DOC}}` | Path to base role (e.g. `team/roles/_base/mel-lead.md`) |
-| `{{ACTIVE_ROLES}}` | List of activated roles for this instance |
-| `{{CADENCE_COLLECTOR}}` | Collector schedule |
-| `{{CADENCE_CURATOR}}` | Curator schedule |
-| `{{CADENCE_ANALYST}}` | Analyst schedule |
-| `{{CADENCE_NARRATIVE}}` | Narrative schedule |
-| `{{CADENCE_SCOUT}}` | Scout schedule |
-| `{{CADENCE_LEAD}}` | Lead digest schedule |
-| `{{SOURCES_NOTES}}` | Human notes on initial sources |
-| `{{HUMAN_CONTACT}}` | Where digests go (e.g. `agents/mel-lead/outputs/` + notification channel) |
-| `{{FRAMEWORK_VERSION}}` | Copied framework version string (matches root `FRAMEWORK_VERSION`) |
-| `{{PROJECT_TITLE}}` / `{{PROJECT_ID}}` | Optional project template slots |
+Same list as before — fill during interview:
 
-## Step 0 — Prerequisites
+`{{TOPIC}}`, `{{PURPOSE}}`, `{{AUDIENCE}}`, `{{DECISIONS_INFORMED}}`, `{{SCOPE}}`, `{{OUT_OF_SCOPE}}`, `{{REPO_URL}}`, `{{REPO_NAME}}`, `{{ORG_OR_USER}}`, `{{ROLE_NAME}}`, `{{ROLE_SLUG}}`, `{{ROLE_DOC}}`, `{{BASE_ROLE_DOC}}`, `{{ACTIVE_ROLES}}`, `{{CADENCE_*}}`, `{{SOURCES_NOTES}}`, `{{HUMAN_CONTACT}}`, `{{FRAMEWORK_VERSION}}`, optional `{{PROJECT_TITLE}}` / `{{PROJECT_ID}}`.
 
-- Human has a GitHub account and can create a repo from a template.
-- Framework owner has enabled **Template repository** on `jackyckma/mel-agent-framework` (manual Settings step).
-- Human can [create a scheduled task in Claude and paste the prompt] (UI may change; do not invent button names).
-- Framework version: read root `FRAMEWORK_VERSION` from the framework repo.
+## Resume rule
 
-## Step 1 — Interview the human
+At the start of **every** onboarding chat: open the instance’s `team/SETUP_STATUS.md` if present and continue from the first `pending` row. Update that file after each step.
 
-Ask, one cluster at a time; confirm answers before writing files:
+## Cluster 1 — Repo identity
 
-1. **Topic & purpose** — `{{TOPIC}}`, `{{PURPOSE}}`
-2. **Audience & decisions** — `{{AUDIENCE}}`, `{{DECISIONS_INFORMED}}`
-3. **Scope** — `{{SCOPE}}`, `{{OUT_OF_SCOPE}}`
-4. **Sources** — `{{SOURCES_NOTES}}`
-5. **Cadences** — accept defaults or tune (Step 5)
-6. **Roles to activate** — recommend four: Lead+PCM combined; Data Collector; Curator+Analyst combined; Scout. Record `{{ACTIVE_ROLES}}`.
-7. **Repo** — `{{ORG_OR_USER}}` / `{{REPO_NAME}}` / visibility.
-8. **Human contact** — digest destination `{{HUMAN_CONTACT}}` (file path under `agents/mel-lead/outputs/` plus any notification the operator sets up).
+Ask:
 
-## Step 2 — Create the instance repo from this template
+1. Desired instance repo name (`{{REPO_NAME}}`) and owner (`{{ORG_OR_USER}}`).
+2. **Public vs private.** Note: **GitHub Pages on a private repo needs a paid plan**; if the data is company-sensitive, prefer **private** and confirm they accept Pages limits / alternatives.
 
-1. On the framework repo, click **Use this template** (or run `gh repo create {{REPO_NAME}} --template jackyckma/mel-agent-framework --public` / `--private` as agreed).
-2. Clone the **new instance** repo. Its root **is** the instance skeleton (`team/`, `agents/`, `data/`, `docs/`, `scripts/`, …). There is no nested `template/` folder to copy.
-3. The new repo includes `framework/` as a **read-only reference copy**. Agents never edit `framework/`. Humans update it only via a Lead-led, human-approved framework sync. Root `FRAMEWORK_VERSION` records which framework version this instance was created from.
-4. Fill placeholders in root `README.md`, `team/mandate.md`, and activated `team/roles/*.md`.
-5. Adjust `team/process.md` cadence overrides only if needed (prefer leaving process stable).
-6. For combined roles, document the slug mapping in `team/roles/README.md`.
-7. Add real sources to `data/sources.yml` (start from `data/sources.example.yml`; keep examples clearly marked).
-8. Commit and push.
+Then create the instance:
 
-## Step 3 — GitHub Pages and Actions
+- If a GitHub connector tool is available that can create from a template (example name only: a “create repository from template” function — our test used Composio’s `GITHUB_CREATE_A_REPOSITORY_USING_A_TEMPLATE`), use it against `jackyckma/mel-agent-framework` (or the current framework repo).
+- Otherwise give the human the **Use this template** link on the framework repo and **wait** until the instance exists.
+- Record `{{REPO_URL}}`. Framework owner must have enabled **Template repository** in Settings.
 
-1. Instance Settings → Pages: set source to **GitHub Actions** (exact clicks may vary — use GitHub’s current docs).
-2. Confirm `.github/workflows/pages.yml` and `validate.yml` are present.
-3. Leave `fetch.yml` schedule **commented out** until sources are trusted; then uncomment and set cron.
-4. Never put secrets in the repo; use Actions secrets if a source needs a token.
-5. Framework-only CI (`test.yml`) is **guarded** so it does not run (or spam) on instance repos created from the template.
+Mark SETUP_STATUS: instance created + visibility.
 
-**Note:** Enable Pages **per instance**. The framework maintainer still enables **Template repository** on the framework repo Settings (manual).
+## Cluster 2 — Mandate
 
-## Step 4 — Generate bootstrap prompts
+Ask in one or two short rounds:
 
-For each activated role, take `framework/prompts/<role>.md`, substitute `{{ROLE_NAME}}`, `{{REPO_URL}}`, `{{ROLE_DOC}}`, `{{BASE_ROLE_DOC}}`, `{{ROLE_SLUG}}`.
+- Topic / purpose / audience / decisions informed  
+- Scope / out of scope  
+- Sources notes  
+- Which roles to activate (recommend: Lead+PCM combined, Collector, Curator+Analyst combined, Scout)  
+- Cadences (offer defaults from `team/process.md`)  
+- Contact channel for digests (`{{HUMAN_CONTACT}}` — often `agents/mel-lead/outputs/` + a notification)
 
-Also offer `framework/prompts/mel-lead-chat.md` for an **interactive** Lead chat (human inbox / digests).
+## Fill the instance (no agent scheduled-task git yet)
 
-Keep each prompt under ~150 words. Do **not** paste role duties into the prompt.
+Using whatever **sanctioned write path** exists (connector file write / PR the human accepts / etc.), **not** assuming `git push` from this chat:
 
-## Step 5 — Suggested schedules (tunable)
+1. Fill root `README.md`, `team/mandate.md`, activated `team/roles/*.md`, cadence overrides if any.
+2. Adjust `data/sources.yml` from notes (keep examples disabled until reviewed).
+3. Leave `fetch.yml` schedule commented until sources are trusted.
+4. Remind human: instance Settings → Pages → source = GitHub Actions.
+5. Update `team/SETUP_STATUS.md`.
 
-| Role | Default suggestion | Placeholder |
-|------|--------------------|-------------|
-| Data Collector | Every 6 hours | `{{CADENCE_COLLECTOR}}` |
-| Curator (+ Analyst if combined) | ~1–2 hours after collector | `{{CADENCE_CURATOR}}` / `{{CADENCE_ANALYST}}` |
-| Narrative Designer | After analyst window | `{{CADENCE_NARRATIVE}}` |
-| Scout | Weekly | `{{CADENCE_SCOUT}}` |
-| MEL Lead | Daily digest | `{{CADENCE_LEAD}}` |
+`framework/` in the instance is a **read-only reference copy**.
 
-Output: role → full bootstrap prompt → schedule → “[create a scheduled task in Claude and paste the prompt]”.
+## Output: Scheduled Task paste blocks (human creates in UI)
 
-## Step 6 — Post-setup verification checklist
+**Only after the instance repo exists** (Repository must be chosen at creation).
 
-- [ ] Root `README.md` and `team/mandate.md` have no remaining empty `{{…}}` for activated fields
-- [ ] `FRAMEWORK_VERSION` matches the framework the template was created from
-- [ ] `python scripts/validate_repo.py` passes at the **instance root**
-- [ ] Dashboard loads (`docs/index.html` or Pages URL); empty instance shows “No data yet” / stale, not fake-fresh
-- [ ] Board README + `_templates/` present; human inbox convention understood (`from: human`)
-- [ ] Each active role has `agents/<slug>/state.md`
-- [ ] Ownership understood: only Lead edits `team/` (except board); nobody edits `framework/`, `FRAMEWORK_VERSION`, or `roles/_base/` without human-approved sync
-- [ ] First Lead run (or chat) can post a hello `needs-human` digest
-- [ ] Fetch workflow still disabled until sources reviewed
-- [ ] No secrets in the repo
-- [ ] Scheduled Tasks created; interactive Lead chat bootstrap available if desired
+For each active role, print a copy-paste block:
 
-## Step 7 — Hand-off
+```text
+### Task: MEL — {{ROLE_NAME}}
+Schedule suggestion: {{CADENCE_*}}
+Permission mode: Auto (if the organisation allows it)
 
-1. Link to `framework/docs/OPERATING_GUIDE.md`
-2. Prompt + schedule table (+ optional Lead chat prompt)
-3. Reminder: change behaviour by editing role docs, not prompts
-4. Reminder: framework feedback → `team/framework-feedback/` → human → framework repo
+Click-path (known labels):
+New scheduled task → paste prompt below → Advanced settings → General → Repository = {{REPO_URL}} → Trigger = <schedule> → permission Auto (if allowed)
+
+Prompt:
+<filled text from framework/prompts/<role>.md — under ~150 words>
+```
+
+Also offer interactive Lead: `framework/prompts/mel-lead-chat.md`.
+
+Remind: do **not** create these via tool API if that path cannot set Repository.
+
+## Verification (repo, not task UI)
+
+1. Human uses **Run now** on one task (start with Lead).
+2. Onboarding session (or a later chat) checks the **instance repo**:
+   - A `claude/*` branch appeared, **and**
+   - **Merge agent branches** merged it into `main`, **and**
+   - A run-log line (or expected owned file) exists **on `main`**.
+3. Explicitly: **“Task shows success” is NOT sufficient.**
+
+Update SETUP_STATUS verification row. Point human at Actions tab: red **Merge agent branches** → tell the Lead / resume troubleshooting.
+
+## Hand-off
+
+- Link `framework/docs/OPERATING_GUIDE.md`
+- Role → prompt → schedule table
+- Change behaviour by editing role docs, not prompts
+- Framework feedback → human → framework repo

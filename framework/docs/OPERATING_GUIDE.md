@@ -15,6 +15,20 @@ You are the COO-side owner of a MEL agent team. You talk to **one** agent: the *
 - Use an **interactive Lead chat** (`framework/prompts/mel-lead-chat.md`) so the Lead can file those messages and act immediately, **or** wait for the **scheduled** Lead run to pick them up.
 - Digests go where `{{HUMAN_CONTACT}}` says — typically a file under `agents/mel-lead/outputs/` plus whatever notification channel you set up outside git.
 
+## How to create a Scheduled Task (Claude UI)
+
+Do this **after** the instance GitHub repo exists. The repository must be chosen **when the task is created**.
+
+Known click-path (labels observed 2026-11-12):
+
+1. **New scheduled task**
+2. Paste the role prompt from onboarding / `framework/prompts/<role>.md` (placeholders filled)
+3. **Advanced settings → General → Repository** = your **instance** repo (the form says this makes it a “Claude Code task”)
+4. Set **Trigger** / schedule as agreed
+5. Permission mode **Auto** if your organisation allows it
+
+Do **not** rely on a chat or tool API to create these tasks if that path cannot set Repository — pushes will be refused. If you later open a task’s edit dialog and only see **Local folder** (not Repository), we believe the type cannot be changed after creation (inferred from the UI, not officially documented). Create a **new** task with Repository set instead.
+
 ## How to change a role
 
 1. Open the instance repo.
@@ -24,8 +38,8 @@ You are the COO-side owner of a MEL agent team. You talk to **one** agent: the *
 
 ## How to pause or resume an agent
 
-- **Pause:** stop or disable that role’s Claude Scheduled Task ([create/manage a scheduled task in Claude — use the product’s current controls]). Optionally leave a board message `type: info` that the role is paused.
-- **Resume:** turn the schedule back on. The agent should `git pull` and read `state.md` + open board messages.
+- **Pause:** stop or disable that role’s Claude Scheduled Task ([use the product’s current controls]). Optionally leave a board message `type: info` that the role is paused.
+- **Resume:** turn the schedule back on. The agent syncs from `main` onto its `claude/*` branch and reads `state.md` + open board messages.
 
 Do not delete role docs just to pause; keep history.
 
@@ -39,22 +53,13 @@ Do not delete role docs just to pause; keep history.
 ## When something looks stuck
 
 1. Check the board for `blocker` or stale `in-progress` messages.
-2. Check `agents/<role>/state.md` and the latest file under `agents/<role>/runs/`.
-3. Check GitHub Actions run history if fetch/dashboard jobs exist (`framework/docs/GITHUB_ACTIONS_PRIMER.md`).
-4. Tell the Lead what you see; ask for a recovery plan (retry, skip source, escalate).
+2. Check `agents/<role>/state.md` and the latest file under `agents/<role>/runs/` **on the `main` branch**.
+3. Check GitHub **Actions**:
+   - If you see **red** runs of **Merge agent branches**, tell the Lead — agent work may be sitting on a `claude/*` branch and not landing on `main`.
+   - Also check fetch/dashboard jobs (`framework/docs/GITHUB_ACTIONS_PRIMER.md`).
+4. Remember: a task list showing “success” is **not** proof that files reached `main`.
 
 Silent skips are not allowed by process — absence of a board note on a known failure is itself a problem; tell the Lead.
-
-## Creating a Scheduled Task from a bootstrap prompt
-
-1. Open the prompt text produced at instantiation (from `framework/prompts/<role>.md` with placeholders filled).
-2. [Create a scheduled task in Claude and paste the prompt].
-3. Set the cadence from the instantiation table.
-4. Point it at the instance repo access your organisation already uses for Claude↔GitHub (follow your company’s setup; do not invent UI steps here).
-
-For day-to-day conversation, also keep an interactive Lead chat using `framework/prompts/mel-lead-chat.md`.
-
-Keep prompts thin. If you need new behaviour, edit the repo docs.
 
 ## What never to put in the repo
 

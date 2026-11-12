@@ -8,6 +8,7 @@ Python 3, **standard library preferred**. Root `requirements.txt` lists pytest f
 | `transform.py` | Example raw → `data/processed/`; customise `customise_row()` per instance |
 | `build_dashboard.py` | Build `docs/data/dashboard.json` from processed data (uses collection freshness) |
 | `validate_repo.py` | Structure + board frontmatter/slug checks (offline) |
+| `check_protected_paths.py` | Fail if a branch touches `.github/`, `framework/`, `FRAMEWORK_VERSION`, or `team/roles/_base/` |
 | `yaml_util.py` | Minimal YAML subset loader for `sources.yml` (avoids PyYAML) |
 
 ## Sources config

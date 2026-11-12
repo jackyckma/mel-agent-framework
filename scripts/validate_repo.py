@@ -62,6 +62,7 @@ REQUIRED_PATHS = [
     "README.md",
     "team/mandate.md",
     "team/process.md",
+    "team/SETUP_STATUS.md",
     "team/roles/README.md",
     "team/board/README.md",
     "team/board/_templates/message.md",
@@ -74,6 +75,8 @@ REQUIRED_PATHS = [
     "scripts/transform.py",
     "scripts/build_dashboard.py",
     "scripts/validate_repo.py",
+    "scripts/check_protected_paths.py",
+    ".github/workflows/merge-agent-branches.yml",
 ]
 
 REQUIRED_ROLES = [
