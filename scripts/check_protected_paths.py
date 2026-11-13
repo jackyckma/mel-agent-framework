@@ -8,7 +8,8 @@ Protected (agent branches must not touch):
   - team/roles/_base/**
   - scripts/check_protected_paths.py
   - scripts/validate_repo.py
-    (gate scripts: once landed on main they would police future merges)
+  - scripts/wake_check.py
+    (gate scripts: once landed on main they would police future merges / wakes)
 
 Rename-aware: uses `git diff --name-status --no-renames` so a protected file
 moved to an unprotected path still fails (delete + add both listed).
@@ -31,6 +32,7 @@ PROTECTED_EXACT = frozenset(
         "FRAMEWORK_VERSION",
         "scripts/check_protected_paths.py",
         "scripts/validate_repo.py",
+        "scripts/wake_check.py",
     }
 )
 PROTECTED_PREFIXES = (

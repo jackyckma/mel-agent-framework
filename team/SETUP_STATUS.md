@@ -14,9 +14,10 @@ Onboarding and later chats **update this file** after each step so a new session
 | Actions → Workflow permissions = Read repository contents (read-only) | [Owner] or [Admin] | pending | Do **not** use Read and write; jobs set their own `permissions:` |
 | Pages → Source = GitHub Actions | [Owner] or [Admin] | pending | Settings → Pages |
 | `fetch.yml` schedule decision | [Owner] | pending | Leave commented until sources trusted |
-| First-run test task created in Claude UI (Repository = this repo) | [Owner] | pending | Chat/API tasks **cannot** push (no Repository) |
+| First-run test task created in Claude UI (Repository = this repo) | [Owner] | pending | Chat/API tasks **cannot** push (no Repository); Connectors **all disabled** |
 | First-run: Run now → `claude/*` → Merge green → commit on `main` → Pages | [Owner] + [Lead-chat] | pending | Task UI success ≠ verified |
-| Remaining scheduled tasks created (UI); Active only after test | [Owner] | pending | Paste blocks from Lead-chat |
+| Remaining scheduled tasks created (UI); Active only after test | [Owner] | pending | Paste blocks from Lead-chat; Connectors disabled; env network limited |
+| Task names recorded in `team/task-registry.md` | [Lead-chat] + [Owner] | pending | After each task create |
 | Human contact / digest path set | [Owner] | pending | `{{HUMAN_CONTACT}}` |
 
 ## First-run test — if red

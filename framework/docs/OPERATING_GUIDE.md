@@ -24,14 +24,27 @@ Known click-path (labels observed 2026-11-12):
 1. **New scheduled task**
 2. Paste the role prompt from onboarding / `framework/prompts/<role>.md` (placeholders filled)
 3. **Advanced settings → General → Repository** = your **instance** repo (the form says this makes it a “Claude Code task”)
-4. Set **Trigger** / schedule as agreed
-5. Permission mode **Auto** if your organisation allows it
-6. Keep the task **not Active** until a **Run now** test lands a commit on **`main`** via **Merge agent branches**; then set Active
+4. **Advanced settings → Connectors → DISABLE ALL connectors** (required — roles only need the repo; extra connectors are a prompt-injection / gate-bypass risk)
+5. **Cloud environment** = one with network limited to what `data/sources.yml` needs (or let GitHub Actions fetch and keep the task environment tight)
+6. Set **Trigger** / wake interval as agreed (Lead ~3h; others ~6–12h to start — each wake costs a session; NOOP exits are silent)
+7. Permission mode **Auto** if your organisation allows it
+8. Keep the task **not Active** until a **Run now** test lands a commit on **`main`** via **Merge agent branches**; then set Active
+9. Record the task **name** in `team/task-registry.md` (Lead-chat updates this during onboarding)
 
 Do **not** create these via chat/tool API — those tasks have **no Repository** source, so git push is refused. A UI option **“Allow unrestricted branch pushes” was not found**; do not rely on it. If you later open a task’s edit dialog and only see **Local folder** (not Repository), we believe the type cannot be changed after creation (inferred from the UI, not officially documented). Create a **new** task with Repository set instead.
 
 Also set on the instance repo: **Settings → Actions → General → Workflow permissions** = **Read repository contents** (read-only — do **not** grant Read and write; workflows declare their own write scopes), and **Settings → Pages → Source = GitHub Actions**.
 
+## On-demand dispatch
+
+When you want a role to work **now** (not wait for its next wake):
+
+1. Tell the **interactive Lead chat** what to assign.
+2. The Lead writes a board message addressed to that role, then fires the role’s scheduled task (via scheduled-task tools if present, or tells you which task to press **Run now** on — see `team/task-registry.md`).
+3. Confirm the role’s work landed on **`main`** (commit / run-log). Do not trust task UI alone.
+4. The **wake gate** (`scripts/wake_check.py`) is what makes a fired role pick up the message: without an open board message or a due duty, the role exits **NOOP** (no commit, no run-log).
+
+Respect pipeline order: do not fire Curator before Collector’s output is on `main`, and so on.
 ## How to change a role
 
 1. Open the instance repo.
