@@ -152,11 +152,22 @@ class ValidateRepoTests(unittest.TestCase):
             for rel in (
                 f"team/roles/_base/{role}.md",
                 f"team/roles/{role}.md",
-                f"agents/{role}/state.md",
             ):
                 path = root / rel
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("# stub\n", encoding="utf-8")
+            state = root / "agents" / role / "state.md"
+            state.parent.mkdir(parents=True, exist_ok=True)
+            state.write_text(
+                f"# State: {role}\n\n## duties\n\n"
+                "```yaml\n"
+                "duties:\n"
+                "  - name: stub-duty\n"
+                "    cadence_hours: 24\n"
+                "    last_done: null\n"
+                "```\n",
+                encoding="utf-8",
+            )
         (root / "team" / "board" / "archive").mkdir(parents=True, exist_ok=True)
 
 

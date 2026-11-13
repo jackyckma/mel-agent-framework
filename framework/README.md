@@ -4,7 +4,7 @@ A **reusable GitHub template** for a team of AI agents that run a Monitoring, Ev
 
 This repository **is** the template: root layout is a ready-to-use **instance skeleton**. Topic-specific slots use `{{placeholders}}`. Framework-only docs and prompts live under `framework/`.
 
-**Version:** see root `FRAMEWORK_VERSION` (currently `0.3.0`).
+**Version:** see root `FRAMEWORK_VERSION` (currently `0.4.0`).
 
 ## Why framework vs instance?
 

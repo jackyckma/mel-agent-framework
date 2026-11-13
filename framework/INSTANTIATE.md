@@ -65,21 +65,28 @@ For each active role, **[Lead-chat]** prints:
 
 ```text
 ### Task: MEL — {{ROLE_NAME}}
-Schedule suggestion: {{CADENCE_*}}
+Wake interval suggestion: Lead 3h; other roles 6–12h (start long; measure NOOP vs WORK).
+Duty cadence lives in agents/<slug>/state.md — not the same as wake interval.
 Permission mode: Auto (if the organisation allows it)
 
 Click-path:
 New scheduled task → paste prompt → Advanced settings → General → Repository = {{REPO_URL}}
-→ Trigger = <schedule> → permission Auto (if allowed)
+→ Advanced settings → Connectors → DISABLE ALL connectors
+→ Cloud environment = one with network limited to what data/sources.yml needs
+   (or rely on GitHub Actions for fetching and keep the task environment tight)
+→ Trigger = <wake interval> → permission Auto (if allowed)
 
 Prompt:
 <filled framework/prompts/<role>.md>
 ```
 
-Also offer `framework/prompts/mel-lead-chat.md` for day-to-day chat.
+**Security (required):** A task that reads web/board data while holding Gmail, Slack, Stripe, GitHub-write, or other connectors is a **prompt-injection and gate-bypass risk**. Roles only need the **repo**. **[Owner]** must open **Advanced settings → Connectors** and **disable all connectors** for every scheduled role task. Choose a **Cloud environment** per task with network access limited to what sources in `data/sources.yml` need; prefer letting **GitHub Actions** do the fetching so the agent environment stays minimal.
+
+Also offer `framework/prompts/mel-lead-chat.md` for day-to-day chat (interactive Lead may use connectors under Owner control).
 
 **[Owner]**: create each task in the UI as above. Keep the task **inactive / not Active** until the first-run test below passes; then set **Active**.
 
+**[Lead-chat]** after each task is created: record its **name** (and id if scheduled-task tools can look it up) in `team/task-registry.md`, plus the wake interval and status `active`/`paused`.
 ## First-run test checklist
 
 **[Owner]** + **[Lead-chat]** verify together:

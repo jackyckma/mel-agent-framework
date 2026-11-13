@@ -76,6 +76,8 @@ REQUIRED_PATHS = [
     "scripts/build_dashboard.py",
     "scripts/validate_repo.py",
     "scripts/check_protected_paths.py",
+    "scripts/wake_check.py",
+    "team/task-registry.md",
     ".github/workflows/merge-agent-branches.yml",
     ".github/workflows/merge-agent-trigger.yml",
 ]
@@ -228,6 +230,21 @@ def validate_root(root: Path, strict_placeholders: bool = False) -> list[str]:
         ):
             if not (root / rel).exists():
                 errors.append(f"missing required path: {rel}")
+
+    # state.md must expose a machine-readable duties: block (wake_check consumes it)
+    for role_dir in sorted((root / "agents").glob("*")):
+        if not role_dir.is_dir():
+            continue
+        state = role_dir / "state.md"
+        if not state.exists():
+            continue
+        text = state.read_text(encoding="utf-8")
+        if "duties:" not in text:
+            errors.append(f"{state.relative_to(root)}: missing duties: block for wake_check")
+        elif "cadence_hours:" not in text:
+            errors.append(f"{state.relative_to(root)}: duties block missing cadence_hours")
+        elif "last_done:" not in text:
+            errors.append(f"{state.relative_to(root)}: duties block missing last_done")
 
     allowed_slugs = load_board_slugs(root)
     for path in collect_board_files(root / "team" / "board"):

@@ -4,6 +4,23 @@ All notable changes to the MEL agent-team framework are recorded here.
 
 Format: Keep a Changelog. Versioning: SemVer.
 
+## [0.4.0] — 2026-11-13
+
+### Added
+
+- `scripts/wake_check.py` — cheap wake gate (WORK/NOOP) before heavy doc reads; protected like other gate scripts.
+- Machine-readable `duties:` block in every `agents/*/state.md` (`name`, `cadence_hours`, `last_done`).
+- `team/task-registry.md` — role → scheduled task name/id, wake interval, status (for on-demand dispatch).
+- Dispatch protocol in `framework/prompts/mel-lead-chat.md` (board message + fire task; verify on main).
+- `framework/tests/test_wake_check.py` — WORK/NOOP, `to: all`, closed messages, duties due/not-due, Lead stuck-branch.
+
+### Changed
+
+- All `framework/prompts/*.md` bootstraps: step 0 = wake check; NOOP stops immediately (no commit, no run-log).
+- `team/process.md`: NOOP silent exit; wake interval vs duty cadence table; wake_check ownership.
+- INSTANTIATE / onboarding / OPERATING_GUIDE: disable all Connectors on scheduled tasks; tight Cloud environment; record tasks in registry.
+- DESIGN.md: wake gate + dispatch + connector security.
+
 ## [0.3.0] — 2026-11-12
 
 ### Added
