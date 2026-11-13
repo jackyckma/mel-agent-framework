@@ -17,7 +17,7 @@ You are the COO-side owner of a MEL agent team. You talk to **one** agent: the *
 
 ## How to create a Scheduled Task (Claude UI)
 
-Do this **after** the instance GitHub repo exists. The repository must be chosen **when the task is created**.
+Do this **after** the instance GitHub repo exists. The repository must be chosen **when the task is created**. Prefer starting from `framework/prompts/STARTER_PROMPT.md` so onboarding produces paste blocks for you.
 
 Known click-path (labels observed 2026-11-12):
 
@@ -26,8 +26,11 @@ Known click-path (labels observed 2026-11-12):
 3. **Advanced settings → General → Repository** = your **instance** repo (the form says this makes it a “Claude Code task”)
 4. Set **Trigger** / schedule as agreed
 5. Permission mode **Auto** if your organisation allows it
+6. Keep the task **not Active** until a **Run now** test lands a commit on **`main`** via **Merge agent branches**; then set Active
 
-Do **not** rely on a chat or tool API to create these tasks if that path cannot set Repository — pushes will be refused. If you later open a task’s edit dialog and only see **Local folder** (not Repository), we believe the type cannot be changed after creation (inferred from the UI, not officially documented). Create a **new** task with Repository set instead.
+Do **not** create these via chat/tool API — those tasks have **no Repository** source, so git push is refused. A UI option **“Allow unrestricted branch pushes” was not found**; do not rely on it. If you later open a task’s edit dialog and only see **Local folder** (not Repository), we believe the type cannot be changed after creation (inferred from the UI, not officially documented). Create a **new** task with Repository set instead.
+
+Also set on the instance repo: **Settings → Actions → General → Workflow permissions** = **Read repository contents** (read-only — do **not** grant Read and write; workflows declare their own write scopes), and **Settings → Pages → Source = GitHub Actions**.
 
 ## How to change a role
 
