@@ -87,12 +87,14 @@ def folder_and_board(role_slug: str) -> tuple[str, str]:
 
 
 def load_duties(state_text: str) -> list[dict[str, Any]]:
-    """Parse duties from a ```yaml fence containing a top-level duties: list."""
+    """Parse duties from a ```yaml fence containing a top-level duties: list.
+
+    List-item key order does not matter: `- cadence_hours: 24` then `name:` works.
+    """
     m = DUTIES_FENCE_RE.search(state_text)
     if not m:
         return []
     body = m.group("body")
-    # Minimal YAML list parser for duties entries
     duties: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
     in_duties = False
@@ -105,21 +107,82 @@ def load_duties(state_text: str) -> list[dict[str, Any]]:
             continue
         if not in_duties:
             continue
-        m_item = re.match(r"^-\s+name:\s*(.+)$", line.strip()) or re.match(r"^-\s+name:\s*(.+)$", line)
-        # allow indented "- name:"
-        m_item = re.match(r"^\s*-\s+name:\s*(.+)$", line)
+        # New list item: "- key: value" (any key) or bare "-"
+        m_item = re.match(r"^\s*-\s+(.*)$", line)
         if m_item:
-            if current:
+            if current and current.get("name") is not None:
                 duties.append(current)
-            current = {"name": _scalar(m_item.group(1)), "cadence_hours": None, "last_done": None}
+            current = {"name": None, "cadence_hours": None, "last_done": None}
+            rest = m_item.group(1).strip()
+            if rest:
+                m_key = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$", rest)
+                if m_key:
+                    current[m_key.group(1)] = _scalar(m_key.group(2))
             continue
         m_key = re.match(r"^\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$", line)
         if m_key and current is not None:
-            key, val = m_key.group(1), _scalar(m_key.group(2))
-            current[key] = val
-    if current:
+            current[m_key.group(1)] = _scalar(m_key.group(2))
+    if current and current.get("name") is not None:
         duties.append(current)
     return duties
+
+
+def load_folder_board_slugs(root: Path, folder: str) -> set[str]:
+    """Board from/to slugs this agent folder wakes on (defaults + combined mapping).
+
+    Reads `team/roles/README.md` Combined-role mapping: for a row whose Slug matches
+    this folder, each entry in Bases followed that maps to a known board slug is
+    added (so Curator+Analyst in `data-curator` also wakes on `to: analyst`).
+    """
+    slugs: set[str] = set()
+    primary = FOLDER_TO_BOARD.get(folder)
+    if primary:
+        slugs.add(primary)
+    readme = root / "team" / "roles" / "README.md"
+    if not readme.exists():
+        return slugs
+    text = readme.read_text(encoding="utf-8")
+    in_table = False
+    for line in text.splitlines():
+        if "Combined-role mapping" in line:
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if line.startswith("## ") and "Combined" not in line:
+            break
+        if not line.strip().startswith("|"):
+            if in_table and line.strip() and not line.strip().startswith("|") and not line.strip().startswith("#"):
+                # blank or next section prose after table
+                if slugs and not line.strip().startswith("|"):
+                    # keep scanning until ## ; blank lines ok
+                    pass
+            continue
+        if re.match(r"^\|\s*-+", line):
+            continue
+        parts = [p.strip().strip("`") for p in line.split("|")]
+        parts = [p for p in parts if p != ""]
+        # Combined name | Slug | Bases followed
+        if len(parts) < 3:
+            continue
+        if parts[0].lower().startswith("combined") or parts[1].lower() == "slug":
+            continue
+        if parts[1].startswith("_e.g.") or parts[1].startswith("e.g."):
+            continue
+        row_slug = parts[1]
+        if row_slug != folder:
+            continue
+        bases_raw = parts[2]
+        for base in re.split(r"[,;/]+", bases_raw):
+            base = base.strip().strip("`")
+            if not base or base.startswith("_"):
+                continue
+            # base may be folder slug or board slug
+            if base in FOLDER_TO_BOARD:
+                slugs.add(FOLDER_TO_BOARD[base])
+            elif base in BOARD_TO_FOLDER:
+                slugs.add(base)
+    return slugs
 
 
 def _scalar(raw: str) -> Any:
@@ -195,11 +258,13 @@ def parse_frontmatter_fields(text: str) -> dict[str, str]:
 
 def board_messages_for(
     board_dir: Path,
-    board_slug: str,
+    board_slugs: set[str] | str,
     *,
     lead_extra: bool = False,
 ) -> list[str]:
     """Return reasons for open/in-progress messages addressed to this role (or all)."""
+    if isinstance(board_slugs, str):
+        board_slugs = {board_slugs}
     reasons: list[str] = []
     if not board_dir.is_dir():
         return reasons
@@ -210,7 +275,7 @@ def board_messages_for(
         if not m:
             continue
         to = m.group("to")
-        addressed = to == board_slug or to == "all"
+        addressed = to in board_slugs or to == "all"
         text = path.read_text(encoding="utf-8")
         fm = parse_frontmatter_fields(text)
         status = fm.get("status", "")
@@ -219,7 +284,7 @@ def board_messages_for(
         if addressed:
             reasons.append(f"board:{path.name} (to={to}, status={status})")
             continue
-        if lead_extra and board_slug == "lead":
+        if lead_extra and "lead" in board_slugs:
             # open from:human or type:needs-human
             if fm.get("from") == "human" or fm.get("type") == "needs-human":
                 reasons.append(f"board:{path.name} (lead-watch from={fm.get('from')} type={fm.get('type')})")
@@ -286,10 +351,13 @@ def evaluate(
     for name in due:
         reasons.append(f"duty-due:{name}")
 
-    lead = board == "lead"
+    board_slugs = load_folder_board_slugs(root, folder)
+    if board not in board_slugs:
+        board_slugs.add(board)
+    lead = "lead" in board_slugs
     board_reasons = board_messages_for(
         root / "team" / "board",
-        board,
+        board_slugs,
         lead_extra=lead,
     )
     reasons.extend(board_reasons)

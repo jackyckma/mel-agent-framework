@@ -12,7 +12,7 @@ Format: Keep a Changelog. Versioning: SemVer.
 - Machine-readable `duties:` block in every `agents/*/state.md` (`name`, `cadence_hours`, `last_done`).
 - `team/task-registry.md` — role → scheduled task name/id, wake interval, status (for on-demand dispatch).
 - Dispatch protocol in `framework/prompts/mel-lead-chat.md` (board message + fire task; verify on main).
-- `framework/tests/test_wake_check.py` — WORK/NOOP, `to: all`, closed messages, duties due/not-due, Lead stuck-branch.
+- `framework/tests/test_wake_check.py` — WORK/NOOP, `to: all`, closed messages, duties due/not-due, Lead stuck-branch, key-order-independent duties, combined-role board slugs.
 
 ### Changed
 
@@ -20,6 +20,7 @@ Format: Keep a Changelog. Versioning: SemVer.
 - `team/process.md`: NOOP silent exit; wake interval vs duty cadence table; wake_check ownership.
 - INSTANTIATE / onboarding / OPERATING_GUIDE: disable all Connectors on scheduled tasks; tight Cloud environment; record tasks in registry.
 - DESIGN.md: wake gate + dispatch + connector security.
+- `wake_check` duty parser accepts any YAML key order on list items; combined-role board recipients resolved from `team/roles/README.md` mapping.
 
 ## [0.3.0] — 2026-11-12
 

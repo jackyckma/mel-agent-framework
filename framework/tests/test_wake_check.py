@@ -204,6 +204,55 @@ class WakeCheckTests(unittest.TestCase):
             self.assertTrue(work)
             self.assertTrue(any("stuck-branch:claude/old" in r for r in reasons))
 
+    def test_duty_key_order_independent(self):
+        text = (
+            "# State\n\n## duties\n\n```yaml\n"
+            "duties:\n"
+            "  - cadence_hours: 168\n"
+            "    name: signal-scan\n"
+            "    last_done: null\n"
+            "```\n"
+        )
+        duties = wake.load_duties(text)
+        self.assertEqual(len(duties), 1)
+        self.assertEqual(duties[0]["name"], "signal-scan")
+        self.assertEqual(duties[0]["cadence_hours"], 168)
+        due = wake.duties_due(duties, now=datetime(2026, 11, 13, 12, 0, tzinfo=timezone.utc))
+        self.assertEqual(due, ["signal-scan"])
+
+    def test_combined_role_wakes_on_secondary_board_slug(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            now = datetime(2026, 11, 13, 12, 0, tzinfo=timezone.utc)
+            recent = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+            _write_state(
+                root,
+                "data-curator",
+                f"duties:\n  - name: review\n    cadence_hours: 6\n    last_done: {recent}\n",
+            )
+            roles = root / "team" / "roles"
+            roles.mkdir(parents=True)
+            (roles / "README.md").write_text(
+                "## Slug map\n\n"
+                "| Role | Agent folder slug | Board from/to slug |\n"
+                "|------|-------------------|--------------------|\n"
+                "| Curator | `data-curator` | `curator` |\n"
+                "| Analyst | `dashboard-analyst` | `analyst` |\n\n"
+                "### Combined-role mapping (fill if used)\n\n"
+                "| Combined name | Slug | Bases followed |\n"
+                "|---------------|------|----------------|\n"
+                "| Curator + Analyst | `data-curator` | `data-curator, dashboard-analyst` |\n",
+                encoding="utf-8",
+            )
+            _write_board(
+                root,
+                "2026-11-13_lead-to-analyst_001-go.md",
+                "from: lead\nto: analyst\ntype: task\nstatus: open\npriority: normal\ncreated: 2026-11-13T00:00:00Z\n",
+            )
+            work, reasons = wake.evaluate(root, "data-curator", now=now, check_stuck_branches=False)
+            self.assertTrue(work)
+            self.assertTrue(any("to=analyst" in r for r in reasons))
+
 
 if __name__ == "__main__":
     unittest.main()
