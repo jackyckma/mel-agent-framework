@@ -30,7 +30,7 @@ Known click-path (labels observed 2026-11-12):
 
 Do **not** create these via chat/tool API — those tasks have **no Repository** source, so git push is refused. A UI option **“Allow unrestricted branch pushes” was not found**; do not rely on it. If you later open a task’s edit dialog and only see **Local folder** (not Repository), we believe the type cannot be changed after creation (inferred from the UI, not officially documented). Create a **new** task with Repository set instead.
 
-Also set on the instance repo: **Settings → Actions → General → Workflow permissions** so workflows can update contents as needed, and **Settings → Pages → Source = GitHub Actions**.
+Also set on the instance repo: **Settings → Actions → General → Workflow permissions** = **Read repository contents** (read-only — do **not** grant Read and write; workflows declare their own write scopes), and **Settings → Pages → Source = GitHub Actions**.
 
 ## How to change a role
 

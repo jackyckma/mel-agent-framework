@@ -11,7 +11,7 @@ Onboarding and later chats **update this file** after each step so a new session
 | Placeholders filled (`README.md`, `team/mandate.md`) | [Lead-chat] | pending | Via connector write |
 | Roles activated (instance role docs) | [Lead-chat] + [Owner] | pending | |
 | Sources configured (`data/sources.yml`) | [Lead-chat] + [Owner] | pending | Examples disabled until reviewed |
-| Actions → Workflow permissions allow repo contents read/write as needed | [Owner] or [Admin] | pending | Settings → Actions → General |
+| Actions → Workflow permissions = Read repository contents (read-only) | [Owner] or [Admin] | pending | Do **not** use Read and write; jobs set their own `permissions:` |
 | Pages → Source = GitHub Actions | [Owner] or [Admin] | pending | Settings → Pages |
 | `fetch.yml` schedule decision | [Owner] | pending | Leave commented until sources trusted |
 | First-run test task created in Claude UI (Repository = this repo) | [Owner] | pending | Chat/API tasks **cannot** push (no Repository) |
@@ -22,7 +22,7 @@ Onboarding and later chats **update this file** after each step so a new session
 ## First-run test — if red
 
 1. Open Actions: **Trigger merge agent branch** / **Merge agent branches** / Pages.
-2. Check Workflow permissions and Pages source.
+2. Check Actions is enabled; the failed workflow’s own `permissions:` block; Pages source = GitHub Actions.
 3. Ask [Lead-chat] to diagnose; leave `claude/*` for inspection; re-run after fix.
 4. Do not set tasks Active until `main` shows the test commit.
 

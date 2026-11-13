@@ -52,7 +52,7 @@ Mark SETUP_STATUS: instance created + visibility.
 
 Do these in the **instance** GitHub repo (not the framework):
 
-1. **Settings → Actions → General → Workflow permissions** = **Read and write permissions** / allow workflows to read **repository contents** as required so merge/Pages jobs can run (set explicitly; default may be read-only).
+1. **Settings → Actions → General → Workflow permissions** = **Read repository contents** (read-only). Do **not** choose “Read and write permissions”. Merge/trigger/Pages workflows already declare their own job-level `permissions:` (`contents: write` / `actions: write` where needed); keeping the repo default read-only also limits what a rogue workflow on a `claude/*` branch can do with the default token.
 2. **Settings → Pages → Source** = **GitHub Actions**.
 
 Update SETUP_STATUS rows for Actions permissions + Pages.
@@ -92,7 +92,7 @@ Also offer `framework/prompts/mel-lead-chat.md` for day-to-day chat.
    - the test commit / run-log line is on **`main`**;
    - **Pages** deploy ran or was dispatched (check Actions / site).
 4. If **red**:
-   - Open the failed Action log; common causes: Workflow permissions still read-only; Pages source not Actions; protected-path / validate failure; merge conflict; push race (re-run merge / push again after fetch).
+   - Open the failed Action log; common causes: Actions disabled for the repo; the workflow’s own `permissions:` block missing/wrong; Pages source not Actions; protected-path / validate failure; merge conflict; push race (re-run merge / push again after fetch).
    - Tell **[Lead-chat]** / board `blocker`; do **not** mark setup verified.
    - Fix, then **Run now** again until `main` shows the commit.
 5. Only then **[Owner]** sets the task **Active**, creates the remaining role tasks the same way, and repeats a light check as needed.
